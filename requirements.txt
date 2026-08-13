@@ -8,3 +8,4 @@ langchain-core
 langchain-groq
 pypdf
 requests
+langchain-text-splitters

@@ -1,6 +1,8 @@
 from pathlib import Path
 
 # pyrefly: ignore [missing-import]
+from langchain_core.documents import Document
+# pyrefly: ignore [missing-import]
 from pypdf import PdfReader
 
 
@@ -21,27 +23,48 @@ def validate_file(
     return extension in SUPPORTED_EXTENSIONS
 
 
-def load_pdf(
+def load_pdf_documents(
     file_path: str
-) -> str:
+):
 
-    reader = PdfReader(file_path)
+    reader = PdfReader(
+        file_path
+    )
 
-    pages = []
+    documents = []
 
-    for page in reader.pages:
+    filename = Path(
+        file_path
+    ).name
+
+    for page_number, page in enumerate(
+        reader.pages,
+        start=1
+    ):
 
         text = page.extract_text()
 
-        if text:
-            pages.append(text)
+        if text and text.strip():
 
-    return "\n\n".join(pages)
+            documents.append(
+                Document(
+                    page_content=text,
+                    metadata={
+                        "source": filename,
+                        "page": page_number
+                    }
+                )
+            )
 
+    return documents
 
-def load_text(
+def load_txt_documents(
     file_path: str
-) -> str:
+):
+
+    filename = Path(
+        file_path
+    ).name
 
     with open(
         file_path,
@@ -49,12 +72,25 @@ def load_text(
         encoding="utf-8"
     ) as file:
 
-        return file.read()
+        text = file.read()
 
+    if not text.strip():
 
-def load_document(
+        return []
+
+    return [
+        Document(
+            page_content=text,
+            metadata={
+                "source": filename,
+                "page": None
+            }
+        )
+    ]
+
+def load_documents(
     file_path: str
-) -> str:
+):
 
     extension = Path(
         file_path
@@ -62,16 +98,30 @@ def load_document(
 
     if extension == ".pdf":
 
-        return load_pdf(
+        return load_pdf_documents(
             file_path
         )
 
     if extension == ".txt":
 
-        return load_text(
+        return load_txt_documents(
             file_path
         )
 
     raise ValueError(
         f"Unsupported file type: {extension}"
     )
+
+
+def load_document(
+    file_path: str
+) -> str:
+
+    documents = load_documents(
+        file_path
+    )
+
+    return "\n".join(
+        doc.page_content
+        for doc in documents
+    )

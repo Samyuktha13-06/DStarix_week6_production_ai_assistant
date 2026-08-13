@@ -3,7 +3,13 @@ import uuid
 import requests
 # pyrefly: ignore [missing-import]
 import streamlit as st
+from utils.file_manager import (
+    save_uploaded_file
+)
 
+from loaders.document_loader import (
+    load_document
+)
 
 st.set_page_config(
     page_title="DStarix AI Assistant",
@@ -55,17 +61,49 @@ for message in st.session_state.messages:
 
 with st.sidebar:
 
-    st.subheader("Conversation")
+    st.header("📄 Document Upload")
 
-    if st.button("🗑️ Clear Conversation"):
+    uploaded_file = st.file_uploader(
+        "Upload a document",
+        type=["pdf", "txt"],
+        help="Upload a PDF or text document."
+    )
 
-        st.session_state.messages = []
+    if uploaded_file:
 
-        st.session_state.session_id = str(
-            uuid.uuid4()
-        )
+        if st.button(
+            "📥 Process Document"
+        ):
 
-        st.rerun()
+            try:
+
+                file_path = (
+                    save_uploaded_file(
+                        uploaded_file
+                    )
+                )
+
+                document_text = (
+                    load_document(
+                        file_path
+                    )
+                )
+
+                st.success(
+                    "Document uploaded successfully."
+                )
+
+                st.info(
+                    f"Extracted "
+                    f"{len(document_text)} "
+                    f"characters."
+                )
+
+            except Exception as e:
+
+                st.error(
+                    f"Document processing failed: {e}"
+                )
 
 # --------------------------------------------------
 # User Input

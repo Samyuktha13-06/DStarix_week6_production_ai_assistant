@@ -9,3 +9,7 @@ langchain-groq
 pypdf
 requests
 langchain-text-splitters
+sentence-transformers
+faiss-cpu
+langchain-community
+langchain-huggingface

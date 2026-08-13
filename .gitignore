@@ -34,3 +34,4 @@ faiss_index/
 
 # Streamlit
 .streamlit/secrets.toml
+data/vector_store/*

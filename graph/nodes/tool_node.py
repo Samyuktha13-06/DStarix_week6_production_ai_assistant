@@ -1,28 +1,30 @@
 from graph.state import AssistantState
 
-from tools.tool_registry import (
-    get_tool
-)
+from tools.tool_registry import get_tool
 
 
 def tool_node(
     state: AssistantState
 ) -> AssistantState:
 
-    tool_name = state.get(
-        "tool_name"
-    )
+    question = state["question"]
 
-    tool_input = state.get(
-        "tool_input"
-    )
+    tool_name = "calculator"
 
-    if not tool_name:
+    expression = question
 
-        return {
-            **state,
-            "tool_result": None
-        }
+    prefixes = [
+        "calculate",
+        "calculator",
+        "compute"
+    ]
+
+    for prefix in prefixes:
+
+        expression = expression.replace(
+            prefix,
+            ""
+        ).strip()
 
     tool = get_tool(
         tool_name
@@ -35,10 +37,13 @@ def tool_node(
         )
 
     result = tool.invoke(
-        tool_input
+        expression
     )
 
     return {
         **state,
-        "tool_result": result
+        "tool_name": tool_name,
+        "tool_input": expression,
+        "tool_result": result,
+        "answer": f"The result is {result}."
     }

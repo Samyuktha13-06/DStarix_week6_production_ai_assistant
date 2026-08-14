@@ -14,6 +14,10 @@ class AssistantState(TypedDict, total=False):
 
     answer: str
 
+    sources: List[dict]
+
+    route: str
+
     tool_name: str
 
     tool_input: str

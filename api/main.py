@@ -1,9 +1,16 @@
 # pyrefly: ignore [missing-import]
+
 from fastapi import FastAPI
-# pyrefly: ignore [missing-import]
-from pydantic import BaseModel
-# pyrefly: ignore [missing-import]
-from utils.chat import chat
+
+from api.schemas import (
+    AssistantRequest,
+    AssistantResponse
+)
+
+from graph.graph_builder import (
+    build_assistant_graph
+)
+
 
 app = FastAPI(
     title="DStarix AI Assistant",
@@ -14,10 +21,9 @@ app = FastAPI(
     version="1.0.0"
 )
 
-class ChatRequest(BaseModel):
 
-    session_id: str
-    message: str
+assistant_graph = build_assistant_graph()
+
 
 @app.get("/")
 def root():
@@ -27,18 +33,35 @@ def root():
         "message": "DStarix AI Assistant API"
     }
 
-@app.post("/chat")
-def chat_endpoint(
-    request: ChatRequest
+
+@app.post(
+    "/assistant",
+    response_model=AssistantResponse
+)
+def assistant_endpoint(
+    request: AssistantRequest
 ):
 
-    answer = chat(
-        request.session_id,
-        request.message
+    result = assistant_graph.invoke(
+        {
+            "session_id": request.session_id,
+            "question": request.message
+        }
     )
 
     return {
         "session_id": request.session_id,
         "message": request.message,
-        "answer": answer
-    }    
+        "answer": result.get(
+            "answer",
+            ""
+        ),
+        "route": result.get(
+            "route",
+            "unknown"
+        ),
+        "sources": result.get(
+            "sources",
+            []
+        )
+    }

@@ -1,10 +1,7 @@
 import uuid
-from services.rag_service import (
-    RAGService
-)
 import requests
-# pyrefly: ignore [missing-import]
 import streamlit as st
+
 from utils.file_manager import (
     save_uploaded_file
 )
@@ -12,24 +9,37 @@ from utils.file_manager import (
 from loaders.document_loader import (
     load_documents
 )
+
 from loaders.chunk_documents import (
     chunk_documents
 )
+
 from retrieval.vector_store import (
     create_vector_store,
     save_vector_store
 )
 
+
+# --------------------------------------------------
+# Page Configuration
+# --------------------------------------------------
+
 st.set_page_config(
     page_title="DStarix AI Assistant",
-    page_icon="🤖"
+    page_icon="🤖",
+    layout="wide"
 )
 
+
+# --------------------------------------------------
+# Application Header
+# --------------------------------------------------
 
 st.title("🤖 DStarix AI Assistant")
 
 st.caption(
-    "Conversational AI with persistent session memory"
+    "Production-ready AI Assistant with Chat, RAG, "
+    "Conversation Memory and Tool Calling"
 )
 
 
@@ -54,7 +64,7 @@ if "messages" not in st.session_state:
 
 
 # --------------------------------------------------
-# Display Messages
+# Display Previous Messages
 # --------------------------------------------------
 
 for message in st.session_state.messages:
@@ -67,67 +77,134 @@ for message in st.session_state.messages:
             message["content"]
         )
 
-        if "sources" in message and message["sources"]:
+        # Display route if available
+        if message.get("route"):
 
-            with st.expander("📚 View Sources"):
+            st.caption(
+                f"Route: {message['route']}"
+            )
 
-                for idx, src in enumerate(message["sources"], start=1):
+        # Display sources if available
+        if (
+            "sources" in message
+            and message["sources"]
+        ):
 
-                    page_info = f" (Page {src['page']})" if src.get("page") else ""
-                    st.markdown(f"**{idx}.** {src['source']}{page_info}")
+            with st.expander(
+                "📚 View Sources"
+            ):
 
+                for idx, src in enumerate(
+                    message["sources"],
+                    start=1
+                ):
+
+                    page_info = (
+                        f" (Page {src['page']})"
+                        if src.get("page")
+                        else ""
+                    )
+
+                    st.markdown(
+                        f"**{idx}.** "
+                        f"{src['source']}"
+                        f"{page_info}"
+                    )
+
+
+# --------------------------------------------------
+# Sidebar
+# --------------------------------------------------
 
 with st.sidebar:
 
     st.header("📄 Document Upload")
 
+    st.write(
+        "Upload a PDF or text document "
+        "to add it to the RAG knowledge base."
+    )
+
     uploaded_file = st.file_uploader(
         "Upload a document",
         type=["pdf", "txt"],
-        help="Upload a PDF or text document."
+        help=(
+            "Supported formats: PDF and TXT"
+        )
     )
 
     if uploaded_file:
 
         if st.button(
-            "📥 Process Document"
+            "📥 Process Document",
+            use_container_width=True
         ):
 
             try:
 
-                file_path = (
-                    save_uploaded_file(
-                        uploaded_file
-                    )
+                # ----------------------------------
+                # Save uploaded file
+                # ----------------------------------
+
+                file_path = save_uploaded_file(
+                    uploaded_file
                 )
+
+                # ----------------------------------
+                # Load document
+                # ----------------------------------
 
                 documents = load_documents(
                     file_path
                 )
 
+                # ----------------------------------
+                # Chunk document
+                # ----------------------------------
+
                 chunks = chunk_documents(
                     documents
                 )
+
+                # ----------------------------------
+                # Create vector store
+                # ----------------------------------
 
                 vector_store = create_vector_store(
                     chunks
                 )
 
+                # ----------------------------------
+                # Save vector store
+                # ----------------------------------
+
                 save_vector_store(
                     vector_store
                 )
+
+                # ----------------------------------
+                # Calculate extracted text
+                # ----------------------------------
 
                 document_text = "\n".join(
                     doc.page_content
                     for doc in documents
                 )
 
+                # ----------------------------------
+                # Success message
+                # ----------------------------------
+
                 st.success(
-                    "Document processed and added to vector store successfully."
+                    "Document processed and added "
+                    "to the vector store successfully."
                 )
 
                 st.info(
-                    f"Extracted {len(document_text)} characters across {len(chunks)} chunks."
+                    f"Extracted "
+                    f"{len(document_text)} characters "
+                    f"across "
+                    f"{len(chunks)} chunks."
                 )
 
             except Exception as e:
@@ -136,13 +213,49 @@ with st.sidebar:
                     f"Document processing failed: {e}"
                 )
 
+    # --------------------------------------------------
+    # Application Information
+    # --------------------------------------------------
+
     st.markdown("---")
-    st.header("⚙️ Settings")
-    use_rag = st.checkbox(
-        "Enable RAG (Query documents)",
-        value=False,
-        help="If enabled, answers will be retrieved from the uploaded documents."
+
+    st.header("⚙️ Assistant")
+
+    st.info(
+        "The assistant automatically routes "
+        "each question to Chat, RAG, or Tool Calling."
     )
+
+    st.markdown("---")
+
+    st.header("🆔 Session")
+
+    st.caption(
+        "Current Session ID:"
+    )
+
+    st.code(
+        st.session_state.session_id,
+        language="text"
+    )
+
+    # --------------------------------------------------
+    # Clear Conversation
+    # --------------------------------------------------
+
+    if st.button(
+        "🗑️ Clear Conversation",
+        use_container_width=True
+    ):
+
+        st.session_state.messages = []
+
+        st.session_state.session_id = str(
+            uuid.uuid4()
+        )
+
+        st.rerun()
+
 
 # --------------------------------------------------
 # User Input
@@ -153,105 +266,191 @@ question = st.chat_input(
 )
 
 
+# --------------------------------------------------
+# Process User Question
+# --------------------------------------------------
+
 if question:
+
+    # ----------------------------------------------
+    # Add User Message
+    # ----------------------------------------------
 
     st.session_state.messages.append({
         "role": "user",
         "content": question
     })
 
-    with st.chat_message("user"):
+    with st.chat_message(
+        "user"
+    ):
 
-        st.write(question)
+        st.write(
+            question
+        )
+
+    # ----------------------------------------------
+    # Call Unified Assistant API
+    # ----------------------------------------------
 
     try:
 
-        if use_rag:
+        response = requests.post(
+            "http://127.0.0.1:8000/assistant",
 
-            try:
+            json={
+                "session_id":
+                    st.session_state.session_id,
 
-                rag_service = RAGService()
-
-                result = rag_service.ask(
+                "message":
                     question
-                )
+            },
 
-                answer = result["answer"]
-                sources = result.get("sources", [])
+            timeout=120
+        )
 
-            except FileNotFoundError:
+        # Raise exception for HTTP errors
+        response.raise_for_status()
 
-                answer = (
-                    "No document has been processed yet. "
-                    "Please upload and process a document in the sidebar first."
-                )
-                sources = []
+        # ------------------------------------------
+        # Parse API Response
+        # ------------------------------------------
 
-            except Exception as e:
+        data = response.json()
 
-                answer = f"Error querying RAG service: {e}"
-                sources = []
+        answer = data.get(
+            "answer",
+            ""
+        )
 
-            st.session_state.messages.append({
-                "role": "assistant",
-                "content": answer,
-                "sources": sources
-            })
+        route = data.get(
+            "route",
+            "unknown"
+        )
 
-            with st.chat_message(
-                "assistant"
-            ):
+        sources = data.get(
+            "sources",
+            []
+        )
 
-                st.write(answer)
+        # ------------------------------------------
+        # Store Assistant Message
+        # ------------------------------------------
 
-                if sources:
+        st.session_state.messages.append({
+            "role": "assistant",
+            "content": answer,
+            "route": route,
+            "sources": sources
+        })
 
-                    with st.expander("📚 View Sources"):
+        # ------------------------------------------
+        # Display Assistant Response
+        # ------------------------------------------
 
-                        for idx, src in enumerate(sources, start=1):
+        with st.chat_message(
+            "assistant"
+        ):
 
-                            page_info = f" (Page {src['page']})" if src.get("page") else ""
-                            st.markdown(f"**{idx}.** {src['source']}{page_info}")
-
-        else:
-
-            response = requests.post(
-                "http://127.0.0.1:8000/chat",
-                json={
-                    "session_id":
-                        st.session_state.session_id,
-                    "message": question
-                },
-                timeout=120
+            st.write(
+                answer
             )
 
-            response.raise_for_status()
+            # --------------------------------------
+            # Display Route
+            # --------------------------------------
 
-            data = response.json()
+            if route:
 
-            answer = data["answer"]
+                st.caption(
+                    f"Route: {route}"
+                )
 
-            st.session_state.messages.append({
-                "role": "assistant",
-                "content": answer
-            })
+            # --------------------------------------
+            # Display Sources
+            # --------------------------------------
 
-            with st.chat_message(
-                "assistant"
-            ):
+            if sources:
 
-                st.write(answer)
+                with st.expander(
+                    "📚 View Sources"
+                ):
+
+                    for idx, src in enumerate(
+                        sources,
+                        start=1
+                    ):
+
+                        page_info = (
+                            f" (Page {src['page']})"
+                            if src.get("page")
+                            else ""
+                        )
+
+                        st.markdown(
+                            f"**{idx}.** "
+                            f"{src['source']}"
+                            f"{page_info}"
+                        )
+
+
+    # ----------------------------------------------
+    # FastAPI Connection Error
+    # ----------------------------------------------
 
     except requests.exceptions.ConnectionError:
 
         st.error(
-            "Unable to connect to the FastAPI server."
+            "❌ Unable to connect to the FastAPI server."
         )
+
+        st.info(
+            "Start the API using:\n\n"
+            "`uvicorn api.main:app --reload`"
+        )
+
+
+    # ----------------------------------------------
+    # Request Timeout
+    # ----------------------------------------------
+
+    except requests.exceptions.Timeout:
+
+        st.error(
+            "⏱️ The request timed out. "
+            "Please try again."
+        )
+
+
+    # ----------------------------------------------
+    # HTTP Error
+    # ----------------------------------------------
+
+    except requests.exceptions.HTTPError as e:
+
+        st.error(
+            f"❌ API request failed: {e}"
+        )
+
+        try:
+
+            error_detail = response.json()
+
+            st.json(
+                error_detail
+            )
+
+        except Exception:
+
+            pass
+
+
+    # ----------------------------------------------
+    # Other Errors
+    # ----------------------------------------------
 
     except Exception as e:
 
         st.error(
-            f"An error occurred: {e}"
+            f"❌ An unexpected error occurred: {e}"
         )
-
-

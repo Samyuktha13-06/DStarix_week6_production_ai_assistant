@@ -1,0 +1,72 @@
+[
+    {
+        "id": 1,
+        "question": "How long is the DStarix Generative AI internship?",
+        "expected_information": "The internship duration is 3 months.",
+        "category": "factual",
+        "answerable": true
+    },
+    {
+        "id": 2,
+        "question": "Is the internship remote or on-site?",
+        "expected_information": "The internship is remote.",
+        "category": "factual",
+        "answerable": true
+    },
+    {
+        "id": 3,
+        "question": "What are the working days during the internship?",
+        "expected_information": "The working days are Monday to Friday.",
+        "category": "factual",
+        "answerable": true
+    },
+    {
+        "id": 4,
+        "question": "Are the internship working hours fixed?",
+        "expected_information": "Working hours are flexible, and interns can manage their hours based on availability, provided deadlines are met.",
+        "category": "factual",
+        "answerable": true
+    },
+    {
+        "id": 5,
+        "question": "What are the two phases of the internship?",
+        "expected_information": "The internship has a Learning Phase during the first 1.5 months and a Project Phase during the final 1.5 months.",
+        "category": "multi-part",
+        "answerable": true
+    },
+    {
+        "id": 6,
+        "question": "What are interns expected to do regarding their learning resources?",
+        "expected_information": "Interns are expected to complete assigned learning independently, explore additional resources when necessary, continuously improve technical knowledge, and practice concepts beyond the provided materials.",
+        "category": "multi-part",
+        "answerable": true
+    },
+    {
+        "id": 7,
+        "question": "What are the GitHub and version control expectations for interns?",
+        "expected_information": "Interns may be required to use GitHub or other version control platforms and are expected to create a separate GitHub repository, add task updates, use meaningful commit messages, submit only assigned work, avoid unrelated file changes, and follow repository guidelines.",
+        "category": "detailed",
+        "answerable": true
+    },
+    {
+        "id": 8,
+        "question": "Is the use of AI tools such as ChatGPT and GitHub Copilot permitted?",
+        "expected_information": "AI tools are permitted for learning and productivity, but interns must understand generated content, avoid blindly copying solutions, ensure their work reflects their own understanding, and be able to explain their implementation.",
+        "category": "detailed",
+        "answerable": true
+    },
+    {
+        "id": 9,
+        "question": "What factors are considered when evaluating an intern?",
+        "expected_information": "Evaluation includes timely task completion, learning progress, quality of submitted work, problem-solving ability, professional communication, consistency and commitment, and overall participation.",
+        "category": "detailed",
+        "answerable": true
+    },
+    {
+        "id": 10,
+        "question": "What is the monthly salary provided to interns?",
+        "expected_information": "The document does not provide information about a monthly salary.",
+        "category": "unanswerable",
+        "answerable": false
+    }
+]

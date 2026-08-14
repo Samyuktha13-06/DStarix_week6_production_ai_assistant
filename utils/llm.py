@@ -1,5 +1,6 @@
 # pyrefly: ignore [missing-import]
 from groq import Groq
+from langchain_groq import ChatGroq
 
 from utils.config import GROQ_API_KEY
 
@@ -10,6 +11,13 @@ client = Groq(
 
 
 MODEL_NAME = "llama-3.3-70b-versatile"
+
+
+llm = ChatGroq(
+    api_key=GROQ_API_KEY,
+    model=MODEL_NAME,
+    temperature=0.2
+)
 
 
 def generate_response(

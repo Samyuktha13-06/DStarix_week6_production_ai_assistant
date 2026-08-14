@@ -1,5 +1,7 @@
 import uuid
-
+from services.rag_service import (
+    RAGService
+)
 import requests
 # pyrefly: ignore [missing-import]
 import streamlit as st
@@ -8,7 +10,14 @@ from utils.file_manager import (
 )
 
 from loaders.document_loader import (
-    load_document
+    load_documents
+)
+from loaders.chunk_documents import (
+    chunk_documents
+)
+from retrieval.vector_store import (
+    create_vector_store,
+    save_vector_store
 )
 
 st.set_page_config(
@@ -58,6 +67,15 @@ for message in st.session_state.messages:
             message["content"]
         )
 
+        if "sources" in message and message["sources"]:
+
+            with st.expander("📚 View Sources"):
+
+                for idx, src in enumerate(message["sources"], start=1):
+
+                    page_info = f" (Page {src['page']})" if src.get("page") else ""
+                    st.markdown(f"**{idx}.** {src['source']}{page_info}")
+
 
 with st.sidebar:
 
@@ -83,20 +101,33 @@ with st.sidebar:
                     )
                 )
 
-                document_text = (
-                    load_document(
-                        file_path
-                    )
+                documents = load_documents(
+                    file_path
+                )
+
+                chunks = chunk_documents(
+                    documents
+                )
+
+                vector_store = create_vector_store(
+                    chunks
+                )
+
+                save_vector_store(
+                    vector_store
+                )
+
+                document_text = "\n".join(
+                    doc.page_content
+                    for doc in documents
                 )
 
                 st.success(
-                    "Document uploaded successfully."
+                    "Document processed and added to vector store successfully."
                 )
 
                 st.info(
-                    f"Extracted "
-                    f"{len(document_text)} "
-                    f"characters."
+                    f"Extracted {len(document_text)} characters across {len(chunks)} chunks."
                 )
 
             except Exception as e:
@@ -104,6 +135,14 @@ with st.sidebar:
                 st.error(
                     f"Document processing failed: {e}"
                 )
+
+    st.markdown("---")
+    st.header("⚙️ Settings")
+    use_rag = st.checkbox(
+        "Enable RAG (Query documents)",
+        value=False,
+        help="If enabled, answers will be retrieved from the uploaded documents."
+    )
 
 # --------------------------------------------------
 # User Input
@@ -127,32 +166,81 @@ if question:
 
     try:
 
-        response = requests.post(
-            "http://127.0.0.1:8000/chat",
-            json={
-                "session_id":
-                    st.session_state.session_id,
-                "message": question
-            },
-            timeout=120
-        )
+        if use_rag:
 
-        response.raise_for_status()
+            try:
 
-        data = response.json()
+                rag_service = RAGService()
 
-        answer = data["answer"]
+                result = rag_service.ask(
+                    question
+                )
 
-        st.session_state.messages.append({
-            "role": "assistant",
-            "content": answer
-        })
+                answer = result["answer"]
+                sources = result.get("sources", [])
 
-        with st.chat_message(
-            "assistant"
-        ):
+            except FileNotFoundError:
 
-            st.write(answer)
+                answer = (
+                    "No document has been processed yet. "
+                    "Please upload and process a document in the sidebar first."
+                )
+                sources = []
+
+            except Exception as e:
+
+                answer = f"Error querying RAG service: {e}"
+                sources = []
+
+            st.session_state.messages.append({
+                "role": "assistant",
+                "content": answer,
+                "sources": sources
+            })
+
+            with st.chat_message(
+                "assistant"
+            ):
+
+                st.write(answer)
+
+                if sources:
+
+                    with st.expander("📚 View Sources"):
+
+                        for idx, src in enumerate(sources, start=1):
+
+                            page_info = f" (Page {src['page']})" if src.get("page") else ""
+                            st.markdown(f"**{idx}.** {src['source']}{page_info}")
+
+        else:
+
+            response = requests.post(
+                "http://127.0.0.1:8000/chat",
+                json={
+                    "session_id":
+                        st.session_state.session_id,
+                    "message": question
+                },
+                timeout=120
+            )
+
+            response.raise_for_status()
+
+            data = response.json()
+
+            answer = data["answer"]
+
+            st.session_state.messages.append({
+                "role": "assistant",
+                "content": answer
+            })
+
+            with st.chat_message(
+                "assistant"
+            ):
+
+                st.write(answer)
 
     except requests.exceptions.ConnectionError:
 

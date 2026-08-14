@@ -13,3 +13,9 @@ class AssistantState(TypedDict, total=False):
     history: List[BaseMessage]
 
     answer: str
+
+    tool_name: str
+
+    tool_input: str
+
+    tool_result: str
